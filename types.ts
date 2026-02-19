@@ -13,6 +13,8 @@ export interface SetLog {
 export interface ExerciseDefinition {
   name: string;
   category: string;
+  equipment?: EquipmentType;
+  recommendedSets?: { reps?: number; weight?: number; durationMinutes?: number }[];
 }
 
 export interface Exercise extends ExerciseDefinition {

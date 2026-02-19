@@ -132,28 +132,34 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
 
     const finalCategory = category || 'Push';
     
+    // Find exercise definition for recommendations
+    const definition = availableExercises.find(ex => ex.name.toLowerCase() === name.toLowerCase());
+    
     // Check if this is a brand new exercise
-    const exists = availableExercises.some(ex => ex.name.toLowerCase() === name.toLowerCase());
-    if (!exists) {
+    if (!definition) {
       onNewExerciseCreated({ name: name.trim(), category: finalCategory });
     }
 
     const isTimed = ['Cardio', 'Active Recovery'].includes(finalCategory);
     const prevStats = findPreviousStats(name);
+    const finalEquipment = definition?.equipment || (isTimed ? 'bodyweight' : equipment);
 
     const exercise: Exercise = {
       id: Math.random().toString(36).substr(2, 9),
       name: name.trim(),
       category: finalCategory,
-      equipment: isTimed ? 'bodyweight' : equipment,
+      equipment: finalEquipment,
       previousStats: prevStats,
       sets: isTimed ? 
-        [{ durationMinutes: prevStats?.[0]?.durationMinutes || 0, isCompleted: false }] :
-        (prevStats ? prevStats.map(s => ({ reps: 0, weight: 0, isCompleted: false })) : [
+        (prevStats ? prevStats.map(s => ({ durationMinutes: s.durationMinutes, isCompleted: false })) : 
+         (definition?.recommendedSets ? definition.recommendedSets.map(s => ({ durationMinutes: s.durationMinutes, isCompleted: false })) :
+          [{ durationMinutes: 0, isCompleted: false }])) :
+        (prevStats ? prevStats.map(s => ({ reps: 0, weight: 0, isCompleted: false })) : 
+         (definition?.recommendedSets ? definition.recommendedSets.map(s => ({ reps: s.reps, weight: s.weight, isCompleted: false })) : [
           { reps: 0, weight: 0, isCompleted: false },
           { reps: 0, weight: 0, isCompleted: false },
           { reps: 0, weight: 0, isCompleted: false }
-        ])
+        ]))
     };
 
     onUpdate({
@@ -327,14 +333,20 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-stone-400 ml-1">Suggested for {splitDay.label}</h3>
                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 px-1">
                   {recommendations.map((ex, i) => (
-                    <button
-                      key={i}
-                      onClick={() => addExercise(ex.name, ex.category)}
-                      className="bg-white border border-stone-100 px-4 py-3 rounded-2xl shadow-sm flex flex-col items-start min-w-[140px] hover:border-[#7c9082] transition-colors group"
-                    >
-                      <span className="text-xs font-bold text-stone-700 leading-tight mb-1 group-hover:text-[#7c9082] transition-colors">{ex.name}</span>
-                      <span className="text-[9px] font-bold uppercase tracking-tighter text-stone-300">{ex.category}</span>
-                    </button>
+                    <div key={i} className="relative group">
+                      <button
+                        onClick={() => addExercise(ex.name, ex.category)}
+                        className="bg-white border border-stone-100 px-4 py-3 rounded-2xl shadow-sm flex flex-col items-start min-w-[140px] hover:border-[#7c9082] transition-colors"
+                      >
+                        <span className="text-xs font-bold text-stone-700 leading-tight mb-1 group-hover:text-[#7c9082] transition-colors">{ex.name}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-tighter text-stone-300">{ex.category}</span>
+                      </button>
+                      
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-stone-800 text-white text-[8px] font-bold uppercase tracking-widest rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-30">
+                        {ex.equipment ? `${EQUIPMENT_CONFIG[ex.equipment].icon} ${EQUIPMENT_CONFIG[ex.equipment].label}` : 'No Equipment Info'}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -442,7 +454,7 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
             )}
 
             <div className="space-y-10">
-              {Object.entries(filteredExercises).map(([category, exercises]) => (
+              {(Object.entries(filteredExercises) as [string, Exercise[]][]).map(([category, exercises]) => (
                 <div key={category} className="space-y-4">
                   <div className="flex items-center gap-3 px-2">
                     <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#d4a373]">{category}</h3>
