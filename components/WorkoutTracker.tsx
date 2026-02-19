@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Workout, Exercise, ExerciseDefinition, SplitDay, SetLog, EquipmentType } from '../types';
-import { EQUIPMENT_CONFIG } from '../constants';
+import { EQUIPMENT_CONFIG, COMMON_EXERCISES } from '../constants';
 
 interface WorkoutTrackerProps {
   activeWorkout?: Workout;
@@ -133,16 +133,23 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
     const finalCategory = category || 'Push';
     
     // Find exercise definition for recommendations
-    const definition = availableExercises.find(ex => ex.name.toLowerCase() === name.toLowerCase());
+    const definition = availableExercises.find(ex => ex.name.toLowerCase() === name.toLowerCase())
+                    || COMMON_EXERCISES.find(ex => ex.name.toLowerCase() === name.toLowerCase());
     
     // Check if this is a brand new exercise
-    if (!definition) {
+    if (!definition && !availableExercises.some(ex => ex.name.toLowerCase() === name.toLowerCase())) {
       onNewExerciseCreated({ name: name.trim(), category: finalCategory });
     }
 
     const isTimed = ['Cardio', 'Active Recovery'].includes(finalCategory);
     const prevStats = findPreviousStats(name);
     const finalEquipment = definition?.equipment || (isTimed ? 'bodyweight' : equipment);
+
+    // Calculate max weight from previous stats if available
+    let maxPrevWeight = 0;
+    if (prevStats && !isTimed) {
+      maxPrevWeight = Math.max(...prevStats.map(s => s.weight || 0));
+    }
 
     const exercise: Exercise = {
       id: Math.random().toString(36).substr(2, 9),
@@ -154,12 +161,12 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
         (prevStats ? prevStats.map(s => ({ durationMinutes: s.durationMinutes, isCompleted: false })) : 
          (definition?.recommendedSets ? definition.recommendedSets.map(s => ({ durationMinutes: s.durationMinutes, isCompleted: false })) :
           [{ durationMinutes: 0, isCompleted: false }])) :
-        (prevStats ? prevStats.map(s => ({ reps: 0, weight: 0, isCompleted: false })) : 
-         (definition?.recommendedSets ? definition.recommendedSets.map(s => ({ reps: s.reps, weight: s.weight, isCompleted: false })) : [
-          { reps: 0, weight: 0, isCompleted: false },
-          { reps: 0, weight: 0, isCompleted: false },
-          { reps: 0, weight: 0, isCompleted: false }
-        ]))
+        (prevStats ? prevStats.map(s => ({ reps: s.reps || 10, weight: maxPrevWeight, isCompleted: false })) : 
+          (definition?.recommendedSets ? definition.recommendedSets.map(s => ({ reps: s.reps, weight: s.weight, isCompleted: false })) : [
+            { reps: 10, weight: 0, isCompleted: false },
+            { reps: 10, weight: 0, isCompleted: false },
+            { reps: 10, weight: 0, isCompleted: false }
+          ]))
     };
 
     onUpdate({
