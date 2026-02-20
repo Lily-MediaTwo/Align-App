@@ -169,6 +169,7 @@ export const INITIAL_STATE: AppState = {
   weeklySplit: SPLIT_TEMPLATES[0].days,
   selectedTemplateId: 'ppl-6',
   dailyHydrationGoal: 64,
+  hydrationGoals: { [new Date().toISOString().split('T')[0]]: 64 },
   todayStr: new Date().toISOString().split('T')[0]
 };
 

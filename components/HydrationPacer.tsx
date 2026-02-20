@@ -5,24 +5,36 @@ import { HydrationLog } from '../types';
 interface HydrationPacerProps {
   logs: HydrationLog[];
   dailyGoal: number;
+  hydrationGoals: Record<string, number>;
   todayStr: string;
   onAdd: (oz: number) => void;
   onUpdateGoal: (oz: number) => void;
 }
 
-const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, todayStr, onAdd, onUpdateGoal }) => {
+const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, hydrationGoals, todayStr, onAdd, onUpdateGoal }) => {
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [tempGoal, setTempGoal] = useState(dailyGoal);
+  const [isLogging, setIsLogging] = useState(false);
+
+  // Sync tempGoal if dailyGoal changes externally
+  React.useEffect(() => {
+    setTempGoal(dailyGoal);
+  }, [dailyGoal]);
 
   const now = new Date();
   const todayLogs = logs.filter(l => l.date === todayStr);
   const totalToday = todayLogs.reduce((sum, l) => sum + l.amountOz, 0);
-  const progress = (totalToday / dailyGoal) * 100;
+  const progress = dailyGoal > 0 ? (totalToday / dailyGoal) * 100 : 0;
 
-  // Simple pacing logic
+  // Dynamic Pacing Logic (7am - 11pm window = 16 hours)
   const hour = now.getHours();
-  // Assume 12-hour day (8am-8pm) for pacing
-  const targetAtThisHour = Math.min(dailyGoal, Math.max(0, (hour - 8) * (dailyGoal / 12))); 
+  const startHour = 7;
+  const endHour = 23;
+  const totalActiveHours = endHour - startHour;
+  const elapsedHours = Math.min(totalActiveHours, Math.max(0, hour - startHour));
+  const targetAtThisHour = dailyGoal > 0 
+    ? Math.min(dailyGoal, (elapsedHours / totalActiveHours) * dailyGoal)
+    : 0;
   const isBehind = totalToday < targetAtThisHour;
 
   // History Calculation (Last 7 Days)
@@ -35,20 +47,32 @@ const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, todayS
       const dStr = new Date(d.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
       const dayLogs = logs.filter(l => l.date === dStr);
       const dayTotal = dayLogs.reduce((sum, l) => sum + l.amountOz, 0);
+      const goalForDay = hydrationGoals[dStr] || dailyGoal;
       days.push({
         date: dStr,
         dayName: d.toLocaleDateString(undefined, { weekday: 'short' }),
         total: dayTotal,
-        success: dayTotal >= dailyGoal
+        goal: goalForDay,
+        success: goalForDay > 0 && dayTotal >= goalForDay
       });
     }
     return days;
-  }, [logs, dailyGoal]);
+  }, [logs, dailyGoal, hydrationGoals]);
 
   const handleUpdateGoal = () => {
     onUpdateGoal(tempGoal);
     setIsEditingGoal(false);
   };
+
+  const handleAdd = (oz: number) => {
+    if (isLogging) return;
+    setIsLogging(true);
+    onAdd(oz);
+    setTimeout(() => setIsLogging(false), 500); // 500ms cooldown
+  };
+
+  const radius = 85;
+  const circumference = 2 * Math.PI * radius;
 
   return (
     <div className="space-y-12 animate-in fade-in duration-500 pb-12">
@@ -74,12 +98,12 @@ const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, todayS
           <circle
             cx="100"
             cy="100"
-            r="85"
+            r={radius}
             fill="transparent"
             stroke="#7c9082"
             strokeWidth="10"
-            strokeDasharray={534} // 2 * PI * 85
-            strokeDashoffset={534 * (1 - Math.min(progress, 100) / 100)}
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - Math.min(progress, 100) / 100)}
             strokeLinecap="round"
             className="transition-all duration-1000 ease-out"
           />
@@ -125,16 +149,18 @@ const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, todayS
       {/* Manual Logging */}
       <div className="grid grid-cols-2 gap-4">
         <button 
-          onClick={() => onAdd(8)}
-          className="bg-white border border-stone-100 p-6 rounded-3xl shadow-sm hover:border-[#7c9082] transition-colors group text-left"
+          onClick={() => handleAdd(8)}
+          disabled={isLogging}
+          className={`bg-white border border-stone-100 p-6 rounded-3xl shadow-sm hover:border-[#7c9082] transition-colors group text-left ${isLogging ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <span className="text-2xl block mb-2 group-hover:scale-110 transition-transform">💧</span>
           <span className="text-xs font-bold uppercase tracking-widest text-stone-300 block mb-1">Small</span>
           <span className="text-sm font-medium text-stone-600">8oz Glass</span>
         </button>
         <button 
-          onClick={() => onAdd(20)}
-          className="bg-white border border-stone-100 p-6 rounded-3xl shadow-sm hover:border-[#7c9082] transition-colors group text-left"
+          onClick={() => handleAdd(20)}
+          disabled={isLogging}
+          className={`bg-white border border-stone-100 p-6 rounded-3xl shadow-sm hover:border-[#7c9082] transition-colors group text-left ${isLogging ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <span className="text-2xl block mb-2 group-hover:scale-110 transition-transform">🧴</span>
           <span className="text-xs font-bold uppercase tracking-widest text-stone-300 block mb-1">Large</span>
@@ -152,7 +178,7 @@ const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, todayS
         </div>
         <div className="flex justify-between gap-1">
           {history.map((day, idx) => (
-            <div key={idx} className="flex-1 flex flex-col items-center gap-2">
+            <div key={idx} className="flex-1 flex flex-col items-center gap-2 group relative">
               <div 
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 ${
                   day.success ? 'bg-[#7c9082] text-white shadow-lg shadow-[#7c9082]/20' : 'bg-stone-50 text-stone-200 border border-stone-100'
@@ -163,6 +189,10 @@ const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, todayS
               <span className={`text-[8px] font-bold uppercase ${day.success ? 'text-[#7c9082]' : 'text-stone-300'}`}>
                 {day.dayName}
               </span>
+              {/* Tooltip for historical goal */}
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-stone-800 text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
+                {day.total} / {day.goal} oz
+              </div>
             </div>
           ))}
         </div>

@@ -100,7 +100,11 @@ const App: React.FC = () => {
   const updateHydrationGoal = (goal: number) => {
     setState(prev => ({
       ...prev,
-      dailyHydrationGoal: goal
+      dailyHydrationGoal: goal,
+      hydrationGoals: {
+        ...prev.hydrationGoals,
+        [dayTick]: goal
+      }
     }));
   };
 
@@ -211,6 +215,7 @@ const App: React.FC = () => {
           <HydrationPacer 
             logs={processedState.hydration}
             dailyGoal={processedState.dailyHydrationGoal}
+            hydrationGoals={processedState.hydrationGoals}
             todayStr={dayTick}
             onAdd={addHydration} 
             onUpdateGoal={updateHydrationGoal}
