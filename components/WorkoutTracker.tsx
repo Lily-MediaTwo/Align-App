@@ -12,6 +12,7 @@ interface WorkoutTrackerProps {
   onNewExerciseCreated: (ex: ExerciseDefinition) => void;
   weeklySplit: SplitDay[];
   allHistory: Workout[];
+  todayStr: string;
 }
 
 const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({ 
@@ -22,7 +23,8 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
   availableExercises, 
   onNewExerciseCreated,
   weeklySplit,
-  allHistory
+  allHistory,
+  todayStr
 }) => {
   const [view, setView] = useState<'active' | 'history'>(activeWorkout ? 'active' : 'history');
   const [isAdding, setIsAdding] = useState(false);
@@ -39,8 +41,11 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
   const [historyTypeFilter, setHistoryTypeFilter] = useState<string>('All');
 
   const today = new Date();
-  const dayIndex = (today.getDay() + 6) % 7;
+  const [y, m, d] = todayStr.split('-').map(Number);
+  const localToday = new Date(y, m - 1, d);
+  const dayIndex = (localToday.getDay() + 6) % 7;
   const splitDay = weeklySplit[dayIndex];
+  const todayDisplayStr = localToday.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   const findPreviousStats = (exerciseName: string) => {
     const sortedHistory = [...allHistory].filter(w => w.completed).sort((a, b) => 
@@ -274,8 +279,6 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
     setView('history');
   };
 
-  const todayStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-24">
       {/* View Toggle */}
@@ -320,7 +323,7 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
             <header className="flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#d4a373]">{todayStr}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#d4a373]">{todayDisplayStr}</span>
                   <span className="text-[10px] font-bold text-stone-300">•</span>
                   <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#7c9082]">{splitDay.label} Day</span>
                 </div>

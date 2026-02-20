@@ -15,7 +15,13 @@ const CalendarPicker: React.FC<{
   selectedDate: string; 
   onChange: (date: string) => void 
 }> = ({ selectedDate, onChange }) => {
-  const [viewDate, setViewDate] = useState(new Date(selectedDate || new Date()));
+  const [viewDate, setViewDate] = useState(() => {
+    if (selectedDate) {
+      const [y, m, d] = selectedDate.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    return new Date();
+  });
   
   const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
@@ -36,14 +42,18 @@ const CalendarPicker: React.FC<{
   
   const isSelected = (day: number) => {
     const d = new Date(year, month, day);
-    return d.toISOString().split('T')[0] === selectedDate;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dayStr}` === selectedDate;
   };
 
   const selectDay = (day: number) => {
     const d = new Date(year, month, day);
-    const offset = d.getTimezoneOffset();
-    const localDate = new Date(d.getTime() - (offset * 60 * 1000));
-    onChange(localDate.toISOString().split('T')[0]);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(d.getDate()).padStart(2, '0');
+    onChange(`${y}-${m}-${dayStr}`);
   };
 
   return (
@@ -274,7 +284,10 @@ const AlignmentCenter: React.FC<AlignmentCenterProps> = ({
              <div className="px-1 py-2 flex justify-between items-center bg-stone-50 rounded-2xl px-4">
                 <span className="text-[10px] text-stone-400 font-bold uppercase">Selected</span>
                 <span className="text-xs font-medium text-[#7c9082]">
-                  {new Date(state.cycleConfig.lastStartDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                  {(() => {
+                    const [y, m, d] = state.cycleConfig.lastStartDate.split('-').map(Number);
+                    return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+                  })()}
                 </span>
              </div>
            </div>

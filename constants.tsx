@@ -168,7 +168,8 @@ export const INITIAL_STATE: AppState = {
   availableExercises: COMMON_EXERCISES,
   weeklySplit: SPLIT_TEMPLATES[0].days,
   selectedTemplateId: 'ppl-6',
-  dailyHydrationGoal: 64
+  dailyHydrationGoal: 64,
+  todayStr: new Date().toISOString().split('T')[0]
 };
 
 export const MOOD_CONFIG: Record<string, { emoji: string; color: string }> = {

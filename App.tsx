@@ -11,6 +11,11 @@ import { INITIAL_STATE } from './constants';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('home');
+  const [dayTick, setDayTick] = useState(() => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    return new Date(now.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+  });
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('align_state');
     return saved ? JSON.parse(saved) : INITIAL_STATE;
@@ -20,12 +25,24 @@ const App: React.FC = () => {
     localStorage.setItem('align_state', JSON.stringify(state));
   }, [state]);
 
+  // Refresh todayStr every minute to handle day changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const offset = now.getTimezoneOffset();
+      const current = new Date(now.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+      if (current !== dayTick) {
+        setDayTick(current);
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [dayTick]);
+
   // Auto-complete workouts from previous days
   useEffect(() => {
-    const todayStr = new Date().toLocaleDateString();
     let changed = false;
     const updatedWorkouts = state.workouts.map(w => {
-      if (!w.completed && new Date(w.date).toLocaleDateString() !== todayStr) {
+      if (!w.completed && new Date(w.date).toLocaleDateString() !== new Date().toLocaleDateString()) {
         changed = true;
         return { ...w, completed: true };
       }
@@ -35,11 +52,11 @@ const App: React.FC = () => {
     if (changed) {
       setState(prev => ({ ...prev, workouts: updatedWorkouts }));
     }
-  }, [state.workouts]);
+  }, [state.workouts, dayTick]);
 
   // Derived state for goals based on behavior
   const processedState = useMemo(() => {
-    const newState = { ...state };
+    const newState = { ...state, todayStr: dayTick };
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     
@@ -61,14 +78,18 @@ const App: React.FC = () => {
     });
 
     return newState;
-  }, [state]);
+  }, [state, dayTick]);
 
   const addHydration = (oz: number) => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    const localDateStr = new Date(now.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+    
     const newLog: HydrationLog = {
       id: Math.random().toString(36).substr(2, 9),
-      date: new Date().toISOString().split('T')[0],
+      date: localDateStr,
       amountOz: oz,
-      timestamp: new Date().toISOString()
+      timestamp: now.toISOString()
     };
     setState(prev => ({
       ...prev,
@@ -182,6 +203,7 @@ const App: React.FC = () => {
             onNewExerciseCreated={handleNewExerciseCreated}
             weeklySplit={processedState.weeklySplit}
             allHistory={processedState.workouts}
+            todayStr={dayTick}
           />
         );
       case 'hydration':
@@ -189,6 +211,7 @@ const App: React.FC = () => {
           <HydrationPacer 
             logs={processedState.hydration}
             dailyGoal={processedState.dailyHydrationGoal}
+            todayStr={dayTick}
             onAdd={addHydration} 
             onUpdateGoal={updateHydrationGoal}
           />

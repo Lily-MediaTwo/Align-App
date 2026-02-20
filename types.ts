@@ -100,4 +100,5 @@ export interface AppState {
   weeklySplit: SplitDay[];
   selectedTemplateId?: string;
   dailyHydrationGoal: number;
+  todayStr: string;
 }

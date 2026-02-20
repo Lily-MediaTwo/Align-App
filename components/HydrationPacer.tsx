@@ -5,21 +5,21 @@ import { HydrationLog } from '../types';
 interface HydrationPacerProps {
   logs: HydrationLog[];
   dailyGoal: number;
+  todayStr: string;
   onAdd: (oz: number) => void;
   onUpdateGoal: (oz: number) => void;
 }
 
-const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, onAdd, onUpdateGoal }) => {
+const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, todayStr, onAdd, onUpdateGoal }) => {
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [tempGoal, setTempGoal] = useState(dailyGoal);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const now = new Date();
   const todayLogs = logs.filter(l => l.date === todayStr);
   const totalToday = todayLogs.reduce((sum, l) => sum + l.amountOz, 0);
   const progress = (totalToday / dailyGoal) * 100;
 
   // Simple pacing logic
-  const now = new Date();
   const hour = now.getHours();
   // Assume 12-hour day (8am-8pm) for pacing
   const targetAtThisHour = Math.min(dailyGoal, Math.max(0, (hour - 8) * (dailyGoal / 12))); 
@@ -31,7 +31,8 @@ const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, onAdd,
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dStr = d.toISOString().split('T')[0];
+      const offset = d.getTimezoneOffset();
+      const dStr = new Date(d.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
       const dayLogs = logs.filter(l => l.date === dStr);
       const dayTotal = dayLogs.reduce((sum, l) => sum + l.amountOz, 0);
       days.push({
@@ -53,7 +54,8 @@ const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, onAdd,
     <div className="space-y-12 animate-in fade-in duration-500 pb-12">
       <header className="text-center">
         <h2 className="serif text-2xl text-stone-800">Steady Pacing</h2>
-        <p className="text-sm text-stone-400 mt-1 italic">
+        <p className="text-[9px] text-stone-300 font-bold uppercase tracking-widest mt-1">Updated {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+        <p className="text-sm text-stone-400 mt-2 italic">
           {isBehind ? "A small sip would put you back on track." : "You're perfectly on pace."}
         </p>
       </header>

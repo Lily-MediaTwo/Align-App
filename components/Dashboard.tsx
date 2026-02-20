@@ -20,15 +20,24 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
     fetchData();
   }, [state]);
 
-  const today = new Date();
-  const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const dayIndex = (today.getDay() + 6) % 7;
+  const [y, m, d] = state.todayStr.split('-').map(Number);
+  const localToday = new Date(y, m - 1, d);
+  const dateStr = localToday.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const dayIndex = (localToday.getDay() + 6) % 7;
   const todaySplit = state.weeklySplit[dayIndex];
 
   // Cycle Phase Calculation
-  const diffTime = Math.abs(today.getTime() - new Date(state.cycleConfig.lastStartDate).getTime());
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  const dayOfCycle = (diffDays % state.cycleConfig.cycleLength) + 1;
+  const getCycleDay = () => {
+    const [cy, cm, cd] = state.cycleConfig.lastStartDate.split('-').map(Number);
+    const startDate = new Date(cy, cm - 1, cd);
+    // Set both to midnight to compare full days
+    const t = new Date(localToday.getFullYear(), localToday.getMonth(), localToday.getDate());
+    const diffTime = Math.abs(t.getTime() - startDate.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return (diffDays % state.cycleConfig.cycleLength) + 1;
+  };
+  
+  const dayOfCycle = getCycleDay();
   
   let currentPhase: CyclePhase = 'follicular';
   if (dayOfCycle <= 5) currentPhase = 'menstrual';
@@ -36,14 +45,14 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
   else if (dayOfCycle === 14) currentPhase = 'ovulatory';
   else currentPhase = 'luteal';
 
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = state.todayStr;
   const todayHydration = state.hydration
     .filter(h => h.date === todayStr)
     .reduce((sum, h) => sum + h.amountOz, 0);
   const hydrationGoal = state.dailyHydrationGoal;
 
   const getGreeting = () => {
-    const hour = today.getHours();
+    const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
     if (hour < 17) return "Good afternoon";
     return "Good evening";
