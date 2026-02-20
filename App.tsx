@@ -20,6 +20,23 @@ const App: React.FC = () => {
     localStorage.setItem('align_state', JSON.stringify(state));
   }, [state]);
 
+  // Auto-complete workouts from previous days
+  useEffect(() => {
+    const todayStr = new Date().toLocaleDateString();
+    let changed = false;
+    const updatedWorkouts = state.workouts.map(w => {
+      if (!w.completed && new Date(w.date).toLocaleDateString() !== todayStr) {
+        changed = true;
+        return { ...w, completed: true };
+      }
+      return w;
+    });
+    
+    if (changed) {
+      setState(prev => ({ ...prev, workouts: updatedWorkouts }));
+    }
+  }, [state.workouts]);
+
   // Derived state for goals based on behavior
   const processedState = useMemo(() => {
     const newState = { ...state };

@@ -28,7 +28,7 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
   const [isAdding, setIsAdding] = useState(false);
   const [newExercise, setNewExercise] = useState<{ name: string; category: string; equipment: EquipmentType }>({ 
     name: '', 
-    category: 'Push',
+    category: 'Chest',
     equipment: 'barbell'
   });
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -173,7 +173,7 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
       ...activeWorkout,
       exercises: [...activeWorkout.exercises, exercise]
     });
-    setNewExercise({ name: '', category: 'Push', equipment: 'barbell' });
+    setNewExercise({ name: '', category: 'Chest', equipment: 'barbell' });
     setIsAdding(false);
   };
 
@@ -327,7 +327,7 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
                 <h2 className="serif text-2xl text-stone-800">{activeWorkout.name}</h2>
               </div>
               <button 
-                onClick={() => setIsAdding(true)}
+                onClick={() => setIsAdding(!isAdding)}
                 className="w-10 h-10 rounded-full bg-[#7c9082] flex items-center justify-center text-white hover:bg-[#6b7d70] transition-all shadow-lg"
               >
                 <span className="text-xl">{isAdding ? '✕' : '+'}</span>
@@ -425,8 +425,8 @@ const WorkoutTracker: React.FC<WorkoutTrackerProps> = ({
                         value={newExercise.category}
                         onChange={e => setNewExercise({ ...newExercise, category: e.target.value })}
                       >
-                        <option value="Push">Push</option>
-                        <option value="Pull">Pull</option>
+                        <option value="Chest">Chest</option>
+                        <option value="Back">Back</option>
                         <option value="Legs">Legs</option>
                         <option value="Shoulders">Shoulders</option>
                         <option value="Arms">Arms</option>
