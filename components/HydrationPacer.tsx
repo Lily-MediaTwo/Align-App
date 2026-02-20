@@ -47,7 +47,7 @@ const HydrationPacer: React.FC<HydrationPacerProps> = ({ logs, dailyGoal, hydrat
       const dStr = new Date(d.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
       const dayLogs = logs.filter(l => l.date === dStr);
       const dayTotal = dayLogs.reduce((sum, l) => sum + l.amountOz, 0);
-      const goalForDay = hydrationGoals[dStr] || dailyGoal;
+      const goalForDay = (hydrationGoals && hydrationGoals[dStr]) || dailyGoal;
       days.push({
         date: dStr,
         dayName: d.toLocaleDateString(undefined, { weekday: 'short' }),

@@ -18,7 +18,15 @@ const App: React.FC = () => {
   });
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('align_state');
-    return saved ? JSON.parse(saved) : INITIAL_STATE;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        ...INITIAL_STATE,
+        ...parsed,
+        hydrationGoals: parsed.hydrationGoals || { [INITIAL_STATE.todayStr]: INITIAL_STATE.dailyHydrationGoal }
+      };
+    }
+    return INITIAL_STATE;
   });
 
   useEffect(() => {
